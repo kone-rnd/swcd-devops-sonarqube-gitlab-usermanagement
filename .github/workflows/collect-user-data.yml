@@ -25,13 +25,13 @@ jobs:
       - name: Scan GitLab -> gitlab-access.json
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-        run: python3 services/scan_gitlab_access.py
+        run: python3 gitlab-user-data/scan_gitlab_access.py -o gitlab-user-data/gitlab-access.json
 
       - name: Commit snapshot if changed
         run: |
           git config user.name  "sonarqube-actions-bot"
           git config user.email "sonarqube-actions-bot@kone.com"
-          git add gitlab-access.json
+          git add gitlab-user-data/gitlab-access.json
           if git diff --cached --quiet; then
             echo "no changes"
           else

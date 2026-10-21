@@ -1,6 +1,6 @@
 locals {
   # Shared inputs live at the repo root (same GitLab org for every environment).
-  access = jsondecode(file("${path.module}/../../gitlab-access.json"))[0]
+  access = jsondecode(file("${path.module}/../../gitlab-user-data/gitlab-access.json"))[0]
   users  = local.access.user_details  # "<uid>" => { name, username, email }
   scopes = local.access.scope_details # [{ scope, id, parent_id, access_details }]
 
