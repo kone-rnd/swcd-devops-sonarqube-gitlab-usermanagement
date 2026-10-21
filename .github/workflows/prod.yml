@@ -1,0 +1,53 @@
+name: prod - sonarqube usermanagement
+
+on:
+  schedule:
+    - cron: "0 10 * * 0"
+  # push:
+  #   branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # AWS OIDC for the S3 backend
+  contents: read
+
+concurrency:
+  group: tf-prod
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: prod # gate with required reviewers in the GitHub environment
+    defaults:
+      run:
+        working-directory: environments/prod
+    env:
+      TF_VAR_sonarqube_host: ${{ secrets.SONARQUBE_HOST }}
+      TF_VAR_sonarqube_token: ${{ secrets.SONARQUBE_TOKEN }}
+      TF_VAR_sonarqube_edition: community
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+
+      - name: Generate SAML users map
+        env:
+          SONAR_HOST: ${{ secrets.SONARQUBE_HOST }}
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+        run: python3 ../../services/sonar_saml_users.py
+
+      - run: terraform init -input=false
+      - run: terraform plan -input=false
+      - run: terraform apply -input=false -auto-approve
