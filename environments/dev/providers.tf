@@ -16,7 +16,7 @@ terraform {
 # Resolve the server version from the unrestricted /api/server/version endpoint, so
 # the provider skips the privileged /api/system/info probe and no version is manual.
 data "external" "sonar_version" {
-  program = ["python3", "${path.module}/../../services/sonar_version.py"]
+  program = ["python3", "${path.module}/../../scripts/sonar_version.py"]
   query   = { host = var.sonarqube_host }
 }
 

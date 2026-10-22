@@ -1,7 +1,6 @@
 variable "sonarqube_host" {
   description = "SonarQube server URL (dev)"
   type        = string
-  default     = "https://sonarqube-dev.srdops.com"
 }
 
 variable "sonarqube_token" {

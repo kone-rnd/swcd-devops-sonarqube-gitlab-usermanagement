@@ -12,12 +12,17 @@ environments/
   dev/                      # dev root: backend (dev state) + SonarQube provider + module call
   prod/                     # prod root: backend (prod state) + ...
 config/config.yml           # shared: GitLab parent groups to onboard
-gitlab-access.json          # shared: GitLab access snapshot (same org for both envs)
-services/                   # helper scripts (see below)
+scripts/                    # helper scripts + the generated access snapshot
+  scan_gitlab_access.py     #   scan GitLab tree -> gitlab-access.json
+  sonar_saml_users.py       #   SonarQube SAML email->login map
+  sonar_version.py          #   resolve SonarQube server version
+  gitlab-access.json        #   generated snapshot (consumed by Terraform)
 ```
 
-Shared inputs (`config/config.yml`, `gitlab-access.json`) live at the repo root. Each
-environment supplies its own SonarQube host/token and its own `sonar-saml-users.json`.
+Shared inputs (`config/config.yml`, `scripts/gitlab-access.json`) live in the repo. The
+SonarQube host is the required `sonarqube_host` variable (no default); in CI it comes from
+the GitHub environment variable `SONAR_HOST`. Each environment supplies its own admin token
+and its own `sonar-saml-users.json`.
 
 ## Model
 
@@ -37,17 +42,18 @@ Members are matched to **SAML** SonarQube accounts by email (`sonar-saml-users.j
 
 ```bash
 # 1. Refresh the shared GitLab snapshot (admin GitLab token), once for both envs:
-export TF_VAR_gitlab_token="glpat-...admin..."
-python3 services/scan_gitlab_access.py            # -> gitlab-access.json
+export GITLAB_TOKEN="glpat-...admin..."
+python3 scripts/scan_gitlab_access.py \
+  -o scripts/gitlab-access.json                   # -> scripts/gitlab-access.json
 
-# 2. Work inside the target environment:
+# 2. Work inside the target environment (host is required; CI sets it from vars.SONAR_HOST):
 cd environments/dev                               # or environments/prod
-export TF_VAR_sonarqube_host="https://sonarqube-dev.srdops.com"
+export TF_VAR_sonarqube_host="https://sonarqube-dev.srdops.com"   # the dev URL (prod differs)
 export TF_VAR_sonarqube_token="squ_...admin..."
 
 # 3. Generate this env's SAML map (SAML accounts only) into the env folder:
 SONAR_HOST="$TF_VAR_sonarqube_host" SONAR_TOKEN="$TF_VAR_sonarqube_token" \
-  python3 ../../services/sonar_saml_users.py       # -> ./sonar-saml-users.json
+  python3 ../../scripts/sonar_saml_users.py        # -> ./sonar-saml-users.json
 
 # 4. Apply:
 terraform init
@@ -59,8 +65,8 @@ Re-run step 1 to refresh GitLab membership, step 3 after new SAML logins, then `
 
 ## Scripts
 
-| Script                              | Purpose                                                        |
-| ----------------------------------- | -------------------------------------------------------------- |
-| `services/scan_gitlab_access.py`    | Scan the GitLab tree -> `gitlab-access.json` (admin token).    |
-| `services/sonar_saml_users.py`      | SAML email->login map for an environment (admin SonarQube token). |
-| `services/convert_to_user_format.py`| Convert an older nested export into the snapshot format.       |
+| Script                          | Purpose                                                           |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `scripts/scan_gitlab_access.py` | Scan the GitLab tree -> `scripts/gitlab-access.json` (admin GitLab token). |
+| `scripts/sonar_saml_users.py`   | SAML email->login map for an environment (admin SonarQube token). |
+| `scripts/sonar_version.py`      | Resolve the server version for the provider (used by `providers.tf`). |

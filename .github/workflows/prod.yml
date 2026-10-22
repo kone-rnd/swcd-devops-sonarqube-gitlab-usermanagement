@@ -16,37 +16,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  terraform:
+  terraform-deploy:
     runs-on: ubuntu-latest
     environment: prod # gate with required reviewers in the GitHub environment
     defaults:
       run:
         working-directory: environments/prod
     env:
-      TF_VAR_sonarqube_host: ${{ secrets.SONARQUBE_HOST }}
+      TF_VAR_sonarqube_host: ${{ vars.SONAR_HOST }}
       TF_VAR_sonarqube_token: ${{ secrets.SONARQUBE_TOKEN }}
       TF_VAR_sonarqube_edition: community
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: eu-west-1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.13.3
 
       - name: Generate SAML users map
         env:
-          SONAR_HOST: ${{ secrets.SONARQUBE_HOST }}
+          SONAR_HOST: ${{ vars.SONAR_HOST }}
           SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
-        run: python3 ../../services/sonar_saml_users.py
+        run: python3 ../../scripts/sonar_saml_users.py
 
       - run: terraform init -input=false
       - run: terraform plan -input=false
