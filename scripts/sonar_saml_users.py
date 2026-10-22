@@ -4,10 +4,9 @@ import base64
 import json
 import os
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
 from collections import Counter
+
+import requests
 
 HOST = os.environ.get("TF_VAR_sonarqube_host").rstrip("/")
 TOKEN = os.environ.get("TF_VAR_sonarqube_token") or ""
@@ -15,13 +14,15 @@ AUTH = "Basic " + base64.b64encode(f"{TOKEN}:".encode()).decode()
 
 
 def get(path, params):
-    url = f"{HOST}/{path}?{urllib.parse.urlencode(params)}"
-    req = urllib.request.Request(url, headers={"Authorization": AUTH})
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        print(f"  HTTP {e.code} on {path}: {e.read().decode()[:200]}", file=sys.stderr)
+        r = requests.get(f"{HOST}/{path}", params=params, headers={"Authorization": AUTH}, timeout=60)
+        r.raise_for_status()
+        return r.json()
+    except requests.HTTPError as e:
+        print(f"  HTTP {e.response.status_code} on {path}: {e.response.text[:200]}", file=sys.stderr)
+        return None
+    except requests.RequestException as e:
+        print(f"  request error on {path}: {e}", file=sys.stderr)
         return None
 
 

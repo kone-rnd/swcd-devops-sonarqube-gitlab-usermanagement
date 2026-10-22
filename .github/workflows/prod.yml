@@ -38,6 +38,9 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install Python dependencies
+        run: pip install requests
+
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.13.3

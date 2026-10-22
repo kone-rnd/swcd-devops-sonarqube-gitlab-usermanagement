@@ -40,6 +40,8 @@ Members are matched to **SAML** SonarQube accounts by email (`sonar-saml-users.j
 
 ## Run (per environment)
 
+The scripts use the `requests` library: `pip install requests` first (CI installs it per job).
+
 ```bash
 # 1. Refresh the shared GitLab snapshot (admin GitLab token), once for both envs:
 export GITLAB_TOKEN="glpat-...admin..."

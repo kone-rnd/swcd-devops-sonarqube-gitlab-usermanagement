@@ -36,10 +36,10 @@ import os
 import sys
 import time
 import re
-import urllib.error
 import urllib.parse
-import urllib.request
 from collections import defaultdict
+
+import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ACCESS_LEVEL_NAMES = {0: "No access", 5: "Minimal", 10: "Guest", 15: "Planner", 20: "Reporter", 30: "Developer", 40: "Maintainer", 50: "Owner"}
@@ -63,20 +63,20 @@ class GitLab:
         self.retries = retries
 
     def _request(self, url):
-        req = urllib.request.Request(url, headers={"PRIVATE-TOKEN": self.token, "Accept": "application/json"})
+        headers = {"PRIVATE-TOKEN": self.token, "Accept": "application/json"}
         for attempt in range(self.retries):
             try:
-                with urllib.request.urlopen(req, timeout=60) as resp:
-                    return json.load(resp), resp.headers
-            except urllib.error.HTTPError as e:
-                if e.code in (403, 404):  # restricted or missing: skip
-                    return None, {}
-                if e.code == 429 or e.code >= 500:
-                    time.sleep(min(int(e.headers.get("Retry-After", 2 ** attempt)), 30))
-                    continue
-                raise
-            except OSError:  # URLError, read/connect timeouts, connection resets
+                resp = requests.get(url, headers=headers, timeout=60)
+            except requests.RequestException:  # connection errors, read/connect timeouts, resets
                 time.sleep(min(2 ** attempt, 30))
+                continue
+            if resp.status_code in (403, 404):  # restricted or missing: skip
+                return None, {}
+            if resp.status_code == 429 or resp.status_code >= 500:
+                time.sleep(min(int(resp.headers.get("Retry-After", 2 ** attempt)), 30))
+                continue
+            resp.raise_for_status()
+            return resp.json(), resp.headers
         print(f"warn: giving up after {self.retries} retries: {url.split('?')[0]}", file=sys.stderr)
         return None, {}
 

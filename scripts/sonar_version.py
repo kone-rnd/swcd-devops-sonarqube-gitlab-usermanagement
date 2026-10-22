@@ -4,22 +4,25 @@
 Reads {"host": "..."} on stdin and the token from TF_VAR_sonarqube_token
 (or SONAR_TOKEN). Uses the unrestricted GET /api/server/version, so the provider
 never needs the privileged /api/system/info probe and no version is passed by hand.
+
+Uses the requests library (not urllib) so only http/https are ever requested.
 """
 import base64
 import json
 import os
 import sys
-import urllib.request
+
+import requests
 
 query = json.load(sys.stdin)
 host = query["host"].rstrip("/")
-token = os.environ.get("TF_VAR_sonarqube_token")
+token = os.environ.get("TF_VAR_sonarqube_token") or os.environ.get("SONAR_TOKEN")
 
-req = urllib.request.Request(
+resp = requests.get(
     f"{host}/api/server/version",
     headers={"Authorization": "Basic " + base64.b64encode(f"{token}:".encode()).decode()},
+    timeout=30,
 )
-with urllib.request.urlopen(req, timeout=30) as r:
-    version = r.read().decode().strip()
+resp.raise_for_status()
 
-json.dump({"version": version}, sys.stdout)
+json.dump({"version": resp.text.strip()}, sys.stdout)
