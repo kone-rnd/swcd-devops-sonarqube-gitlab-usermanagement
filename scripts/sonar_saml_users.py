@@ -8,8 +8,8 @@ from collections import Counter
 
 import requests
 
-HOST = os.environ.get("TF_VAR_sonarqube_host").rstrip("/")
-TOKEN = os.environ.get("TF_VAR_sonarqube_token") or ""
+HOST = (os.environ.get("SONAR_HOST") or os.environ.get("SONARQUBE_HOST") or "").rstrip("/")
+TOKEN = os.environ.get("SONAR_TOKEN") or os.environ.get("SONARQUBE_TOKEN") or ""
 AUTH = "Basic " + base64.b64encode(f"{TOKEN}:".encode()).decode()
 
 

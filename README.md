@@ -21,8 +21,10 @@ scripts/                    # helper scripts + the generated access snapshot
 
 Shared inputs (`config/config.yml`, `scripts/gitlab-access.json`) live in the repo. The
 SonarQube host is the required `sonarqube_host` variable (no default); in CI it comes from
-the GitHub environment variable `SONAR_HOST`. Each environment supplies its own admin token
-and its own `sonar-saml-users.json`.
+the GitHub environment variable `SONAR_HOST`. The admin token is **not** a Terraform
+variable: the provider reads it from the `SONARQUBE_TOKEN` environment variable, so it never
+gets written into a saved plan. Each environment supplies its own token and its own
+`sonar-saml-users.json`.
 
 ## Model
 
@@ -48,13 +50,14 @@ export GITLAB_TOKEN="glpat-...admin..."
 python3 scripts/scan_gitlab_access.py \
   -o scripts/gitlab-access.json                   # -> scripts/gitlab-access.json
 
-# 2. Work inside the target environment (host is required; CI sets it from vars.SONAR_HOST):
+# 2. Work inside the target environment. Host is required (CI sets it from vars.SONAR_HOST);
+#    the token goes in SONARQUBE_TOKEN (read by the provider, never a TF var):
 cd environments/dev                               # or environments/prod
 export TF_VAR_sonarqube_host="https://sonarqube-dev.srdops.com"   # the dev URL (prod differs)
-export TF_VAR_sonarqube_token="squ_...admin..."
+export SONARQUBE_TOKEN="squ_...admin..."
 
 # 3. Generate this env's SAML map (SAML accounts only) into the env folder:
-SONAR_HOST="$TF_VAR_sonarqube_host" SONAR_TOKEN="$TF_VAR_sonarqube_token" \
+SONAR_HOST="$TF_VAR_sonarqube_host" SONAR_TOKEN="$SONARQUBE_TOKEN" \
   python3 ../../scripts/sonar_saml_users.py        # -> ./sonar-saml-users.json
 
 # 4. Apply:

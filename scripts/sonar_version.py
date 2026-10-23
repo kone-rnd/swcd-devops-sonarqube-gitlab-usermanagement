@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Terraform external data source: print {"version": "<sonarqube version>"}.
 
-Reads {"host": "..."} on stdin and the token from TF_VAR_sonarqube_token
-(or SONAR_TOKEN). Uses the unrestricted GET /api/server/version, so the provider
+Reads {"host": "..."} on stdin and the token from SONARQUBE_TOKEN (or SONAR_TOKEN).
+Uses the unrestricted GET /api/server/version, so the provider
 never needs the privileged /api/system/info probe and no version is passed by hand.
 
 Uses the requests library (not urllib) so only http/https are ever requested.
@@ -16,7 +16,7 @@ import requests
 
 query = json.load(sys.stdin)
 host = query["host"].rstrip("/")
-token = os.environ.get("TF_VAR_sonarqube_token") or os.environ.get("SONAR_TOKEN")
+token = os.environ.get("SONARQUBE_TOKEN") or os.environ.get("SONAR_TOKEN")
 
 resp = requests.get(
     f"{host}/api/server/version",

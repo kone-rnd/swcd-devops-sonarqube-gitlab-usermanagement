@@ -22,7 +22,6 @@ data "external" "sonar_version" {
 
 provider "sonarqube" {
   host              = var.sonarqube_host
-  token             = var.sonarqube_token
   installed_edition = var.sonarqube_edition
   installed_version = data.external.sonar_version.result.version
 }
