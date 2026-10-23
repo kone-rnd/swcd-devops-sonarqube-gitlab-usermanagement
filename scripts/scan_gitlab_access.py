@@ -162,8 +162,8 @@ def scan(gl, root, include_projects, exclude_levels, enrich_email, workers):
                         users[uid]["email"] = data.get("email") or data.get("public_email") or ""
 
     scope_details, used = [], set()
-    for key in sorted(scope_access, key=lambda k: scope_info[k]["scope"]):
-        by_level = scope_access[key]
+    for key in sorted(scope_info, key=lambda k: scope_info[k]["scope"]):
+        by_level = scope_access.get(key, {})
         access_details = {}
         for name in LEVEL_ORDER:
             if name in by_level:

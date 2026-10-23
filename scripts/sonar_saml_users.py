@@ -30,8 +30,8 @@ def all_users():
     users, page = [], 1
     while True:
         d = get("api/users/search", {"ps": 500, "p": page})
-        if not d:
-            break
+        if d is None:
+            sys.exit(f"error: user search failed on page {page}; aborting without writing the map")
         batch = d.get("users", [])
         users += batch
         total = d.get("paging", {}).get("total", d.get("total", 0))
@@ -65,8 +65,11 @@ def main():
     print(f"externalProvider breakdown: {dict(breakdown)}")
 
     if not any("externalProvider" in u for u in users):
-        print("WARNING: no 'externalProvider' field on any user — your token likely lacks "
-              "'Administer System'. SonarQube only returns provider/email to an admin token.", file=sys.stderr)
+        # Required identity metadata is missing (token likely lost 'Administer System').
+        # Abort rather than emit an empty map, which would remove all managed memberships.
+        sys.exit("error: no 'externalProvider' field on any user — the token likely lacks "
+                 "'Administer System'. Refusing to write an empty map (would remove all managed "
+                 "memberships). Fix the token and re-run.")
 
     mapping, dupes = {}, 0
     for u in users:
@@ -83,12 +86,16 @@ def main():
             continue
         mapping[key] = u["login"]
 
+    if not mapping:
+        # Never overwrite the map with an empty result: it would plan removal of every
+        # managed membership. A 0 match usually means the wrong --provider label.
+        sys.exit(f"error: 0 '{args.provider}' users matched; refusing to overwrite {args.output} with "
+                 f"an empty map (would remove all managed memberships). Providers seen: {sorted(breakdown)}. "
+                 f"Re-run with --provider <name> if the provider label differs.")
+
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(mapping, f, indent=2, ensure_ascii=False, sort_keys=True)
     print(f"wrote {args.output}: {len(mapping)} '{args.provider}' users ({dupes} duplicate emails skipped)")
-    if not mapping:
-        print(f"NOTE: 0 matched. Pick the right value from the breakdown above and re-run with "
-              f"--provider <name> (seen: {sorted(breakdown)}).", file=sys.stderr)
 
 
 if __name__ == "__main__":

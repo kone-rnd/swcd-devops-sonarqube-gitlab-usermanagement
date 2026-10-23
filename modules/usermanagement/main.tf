@@ -5,12 +5,11 @@ resource "sonarqube_group" "groups" {
   description = "GitLab ${each.value.project_group} access"
 }
 
-# One permission template per project group, matched by project key pattern.
 resource "sonarqube_permission_template" "templates" {
   for_each            = local.project_groups
   name                = each.key
   description         = "Permission template for GitLab group(s): ${join(", ", [for s in each.value : s.scope])}"
-  project_key_pattern = "${each.key}.*"
+  project_key_pattern = "^${replace(each.key, ".", "\\.")}\\..*"
 }
 
 # Attach each group to its project group's template with the tier permissions.

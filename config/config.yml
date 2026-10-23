@@ -1,6 +1,3 @@
-# GitLab parent groups to onboard. Each direct subgroup becomes a SonarQube
-# project group (two groups + one permission template), and its members are
-# assigned to those groups. Add or remove parents here; nothing else to edit.
 parent-groups:
-  - konecorporation/r-d
-  - konecorporation/rnd-internal
+  konecorporation/r-d: rd
+  konecorporation/rnd-internal: rndint

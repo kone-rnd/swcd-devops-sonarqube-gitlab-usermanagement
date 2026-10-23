@@ -6,23 +6,31 @@ locals {
 
   parents = yamldecode(file("${path.module}/../../config/config.yml"))["parent-groups"]
 
-  # Direct subgroups of each parent as {key, scope}. Key = subgroup leaf as-is
-  # (e.g. derp-monitoring), giving the SonarQube key pattern derp-monitoring.*.
   pg_pairs = flatten([
-    for p in local.parents : [
+    for p, prefix in local.parents : [
       for s in local.scopes : {
-        key   = trimprefix(s.scope, "${p}/")
+        key   = "${prefix}-${trimprefix(s.scope, "${p}/")}"
         scope = s
       }
       if startswith(s.scope, "${p}/") && length(split("/", trimprefix(s.scope, "${p}/"))) == 1
     ]
   ])
 
-  # Group scopes by key: the same leaf can exist under multiple parents (e.g. devops),
-  # so union their members into one template instead of one overwriting the other.
   project_groups = {
     for key in distinct([for x in local.pg_pairs : x.key]) :
     key => [for x in local.pg_pairs : x.scope if x.key == key]
+  }
+
+  pg_effective_scopes = {
+    for key, leaves in local.project_groups : key => concat(
+      leaves,
+      flatten([
+        for leaf in leaves : [
+          for s in local.scopes : s
+          if s.scope != leaf.scope && startswith("${leaf.scope}/", "${s.scope}/")
+        ]
+      ])
+    )
   }
 
   tier_permissions = {
@@ -30,21 +38,20 @@ locals {
     developer = ["codeviewer", "user"]
   }
 
-  # Per project group (union across scopes sharing the key): admin = Owner+Maintainer;
-  # developer = everyone else (incl. Reporter) except No access.
+  admin_levels     = ["Owner", "Maintainer"]
+  developer_levels = ["Planner", "Reporter", "Developer"]
+
   pg_uids = {
-    for key, scopes in local.project_groups : key => {
+    for key, scopes in local.pg_effective_scopes : key => {
       admin = toset(flatten([
-        for s in scopes : concat(lookup(s.access_details, "Owner", []), lookup(s.access_details, "Maintainer", []))
+        for s in scopes : flatten([for lvl in local.admin_levels : lookup(s.access_details, lvl, [])])
       ]))
       developer = setsubtract(
-        toset(flatten([for s in scopes : flatten(values(s.access_details))])),
         toset(flatten([
-          for s in scopes : concat(
-            lookup(s.access_details, "Owner", []),
-            lookup(s.access_details, "Maintainer", []),
-            lookup(s.access_details, "No access", []),
-          )
+          for s in scopes : flatten([for lvl in local.developer_levels : lookup(s.access_details, lvl, [])])
+        ])),
+        toset(flatten([
+          for s in scopes : flatten([for lvl in local.admin_levels : lookup(s.access_details, lvl, [])])
         ]))
       )
     }
