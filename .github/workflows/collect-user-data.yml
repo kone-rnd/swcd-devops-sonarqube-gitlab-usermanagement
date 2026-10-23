@@ -1,0 +1,43 @@
+name: collect gitlab user data
+
+on:
+  schedule:
+    - cron: "0 2 * * 0" # sunday 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write # commit the refreshed snapshot
+
+concurrency:
+  group: collect-user-data
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Python dependencies
+        run: pip install requests
+
+      - name: Scan GitLab -> gitlab-access.json
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: python3 scripts/scan_gitlab_access.py -o scripts/gitlab-access.json
+
+      - name: Commit snapshot if changed
+        run: |
+          git config user.name  "sonarqube-actions-bot"
+          git config user.email "sonarqube-actions-bot@kone.com"
+          git add scripts/gitlab-access.json
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "chore: refresh gitlab-access.json [skip ci]"
+            git push
+          fi

@@ -1,0 +1,15 @@
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Sensitive files
+*.auto.tfvars
+
+.cache
+
+
+# Terraform plan artifacts
+tfplan
+*.tfplan

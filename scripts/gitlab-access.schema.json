@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kone/gitlab-access.schema.json",
+  "title": "GitLab access (normalized)",
+  "type": "object",
+  "required": ["schema_version", "scopes", "users", "access"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "access_levels": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "integer" },
+          "path": { "type": "string" },
+          "kind": { "enum": ["group", "project"] },
+          "parent_id": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "users": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "username"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "integer" },
+          "username": { "type": "string", "minLength": 1 },
+          "email": { "type": ["string", "null"], "format": "email" }
+        }
+      }
+    },
+    "access": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["user_id", "scope_id", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "user_id": { "type": "integer" },
+          "scope_id": { "type": "integer" },
+          "level": { "type": "integer", "enum": [0, 5, 10, 15, 20, 30, 40, 50] }
+        }
+      }
+    }
+  }
+}
